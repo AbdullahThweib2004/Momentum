@@ -25,6 +25,28 @@ export async function updateSession(request: NextRequest) {
     },
   });
 
-  await supabase.auth.getUser();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+
+  const { pathname } = request.nextUrl;
+  // Paths reachable without a session.
+  const isPublic =
+    pathname.startsWith("/login") || pathname.startsWith("/auth");
+
+  // Not signed in → send to login (unless already on a public path).
+  if (!user && !isPublic) {
+    const url = request.nextUrl.clone();
+    url.pathname = "/login";
+    return NextResponse.redirect(url);
+  }
+
+  // Signed in but on the login page → send to the dashboard.
+  if (user && pathname.startsWith("/login")) {
+    const url = request.nextUrl.clone();
+    url.pathname = "/";
+    return NextResponse.redirect(url);
+  }
+
   return response;
 }

@@ -37,3 +37,13 @@ export async function getUserId(): Promise<string | null> {
   } = await supabase.auth.getUser();
   return user?.id ?? null;
 }
+
+// Returns the current authenticated user's email, or null.
+export async function getUserEmail(): Promise<string | null> {
+  const supabase = createClient();
+  if (!supabase) return null;
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+  return user?.email ?? null;
+}

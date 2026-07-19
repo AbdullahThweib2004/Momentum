@@ -23,8 +23,8 @@ Tags: **[BUILT]** = done for you · **[YOU]** = your turn
 | 3 | Data layer & mock fallback | ✅ Done |
 | 4 | All six pages | ✅ Done |
 | 5 | AI post generation | 🟡 Mocked — needs wiring |
-| 6 | Connect Supabase | ⬜ Your turn |
-| 7 | Authentication UI | ⬜ Your turn |
+| 6 | Connect Supabase | 🟡 Credentials wired — run the SQL |
+| 7 | Authentication UI | ✅ Done |
 | 8 | Deploy | ⬜ Your turn |
 | 9 | Polish & future ideas | ⬜ Optional |
 
@@ -87,44 +87,38 @@ npm install @anthropic-ai/sdk
 
 ---
 
-## Phase 6 — Connect Supabase ⬜
+## Phase 6 — Connect Supabase 🟡 (credentials wired — 3 SQL steps left)
 
-> The app auto-detects real credentials via `isSupabaseConfigured` and flips from
-> mock data to your live database — **no code change needed**.
+> ✅ Your project URL + publishable key are already in `.env.local`, and the app
+> now runs in **Connected to Supabase** mode. What's left runs inside the
+> Supabase dashboard — the publishable key can't create tables, so this happens
+> in the **SQL Editor**.
 
-- [ ] Create a Supabase project; copy **Project URL** + **anon public key** (Settings → API) — **[YOU]**
-- [ ] Add your keys to `.env.local` — **[YOU]**
-- [ ] Run the migration `supabase/migrations/0001_initial_schema.sql` in the SQL Editor — **[YOU]**
-- [ ] Create a user (Authentication → Add user) — **[YOU]**
-- [ ] Run `supabase/seed.sql` to load demo data — **[YOU]**
-- [ ] Restart `npm run dev` — **[YOU]**
+- [x] Create a Supabase project; copy **Project URL** + **publishable key** — **[BUILT]**
+- [x] Add your keys to `.env.local` — **[BUILT]**
+- [ ] **Run the migration** `supabase/migrations/0001_initial_schema.sql` in the SQL Editor — **[YOU]** ⬅ do this first
+- [ ] **Create your account** — sign up at `/login`, **or** Supabase → Authentication → Add user — **[YOU]**
+- [ ] **Run** `supabase/seed.sql` in the SQL Editor to load demo data — **[YOU]**
 
-**Steps in detail:**
+**Do these in order:**
 
-1. **Create a Supabase project** — at [supabase.com](https://supabase.com) → New project.
-2. **Add your keys** to `.env.local`:
-   ```bash
-   cp .env.local.example .env.local
-   # then edit:
-   NEXT_PUBLIC_SUPABASE_URL=https://YOUR-REF.supabase.co
-   NEXT_PUBLIC_SUPABASE_ANON_KEY=YOUR-ANON-KEY
-   ```
-3. **Run the migration** — paste `supabase/migrations/0001_initial_schema.sql` into the
-   Supabase **SQL Editor** and run. Creates the 3 tables, RLS policies, and the publish-weight trigger.
-4. **Create a user** — Authentication → **Add user**. Rows are scoped to `auth.uid()`.
-5. **Seed the data** — run `supabase/seed.sql` in the SQL Editor.
-6. **Restart & sign in** — restart the dev server.
-
-> ⚠️ **Important gap:** RLS returns **nothing** without a logged-in session. So
-> live data won't appear until the **login screen (Phase 7)** exists. Until then,
-> keep exploring in mock mode — it needs no backend at all.
+1. **Run the migration first.** Supabase → **SQL Editor** → paste all of
+   `supabase/migrations/0001_initial_schema.sql` → Run. Creates the 3 tables, RLS
+   policies, and the publish-weight trigger.
+   ⚠️ *Until this runs, the app will error after login because the tables don't exist yet.*
+2. **Create your account.** Open the app → you'll land on `/login` → **Create an
+   account**. (If your project requires email confirmation, confirm via the email,
+   or add the user directly in Supabase → Authentication → Add user.)
+3. **Seed the demo data.** SQL Editor → run `supabase/seed.sql`. It attaches the
+   sample interests, drafts &amp; history to your user.
+4. **Sign in** and you'll see your live data.
 
 ---
 
-## Phase 7 — Authentication UI ⬜ (required for live data)
-- [ ] Login / sign-up screen (Supabase Auth) — **[YOU]**
-- [ ] Protect routes + redirect unauthenticated users — **[YOU]**
-- [ ] Show signed-in user in the sidebar — **[YOU]**
+## Phase 7 — Authentication UI ✅
+- [x] Login / sign-up screen (Supabase Auth) — `app/login/page.tsx` — **[BUILT]**
+- [x] Protect routes + redirect unauthenticated users — middleware — **[BUILT]**
+- [x] Show signed-in user + sign-out in the sidebar — **[BUILT]**
 
 ## Phase 8 — Deploy ⬜
 - [x] Push to GitHub — **[BUILT]**

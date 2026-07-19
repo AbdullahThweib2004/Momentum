@@ -10,21 +10,25 @@ import {
   Zap,
   Database,
   FlaskConical,
+  LogOut,
 } from "lucide-react";
-import { cn } from "@/lib/utils";
+import { cn, initials } from "@/lib/utils";
 import { NAV_ITEMS } from "./nav";
 import { Button } from "@/components/ui/button";
 import { GenerateDraftDialog } from "@/components/drafts/generate-draft-dialog";
+import { signOut } from "@/lib/auth";
 import type { Interest } from "@/types/database";
 
 export function AppShell({
   children,
   interests,
   supabaseConfigured,
+  userEmail,
 }: {
   children: React.ReactNode;
   interests: Pick<Interest, "id" | "topic">[];
   supabaseConfigured: boolean;
+  userEmail?: string | null;
 }) {
   const pathname = usePathname();
   const [collapsed, setCollapsed] = useState(false);
@@ -119,6 +123,41 @@ export function AppShell({
       </div>
     );
 
+  const UserBlock = ({ compact }: { compact: boolean }) => {
+    if (!userEmail) return null;
+    return (
+      <div
+        className={cn(
+          "mx-3 mb-3 flex items-center gap-2 rounded-lg border border-border bg-muted/40 p-2",
+          compact && "mx-2 justify-center"
+        )}
+      >
+        <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-md bg-primary/10 text-xs font-semibold text-primary">
+          {initials(userEmail.split("@")[0] || userEmail)}
+        </div>
+        {!compact && (
+          <>
+            <div className="min-w-0 flex-1 leading-tight">
+              <div className="truncate text-xs font-medium">{userEmail}</div>
+              <div className="text-[11px] text-muted-foreground">Signed in</div>
+            </div>
+            <form action={signOut}>
+              <Button
+                type="submit"
+                variant="ghost"
+                size="icon"
+                className="h-7 w-7 text-muted-foreground hover:text-foreground"
+                title="Sign out"
+              >
+                <LogOut className="h-4 w-4" />
+              </Button>
+            </form>
+          </>
+        )}
+      </div>
+    );
+  };
+
   return (
     <div className="flex min-h-screen bg-background">
       {/* Desktop sidebar */}
@@ -145,6 +184,7 @@ export function AppShell({
         </div>
         <NavList compact={collapsed} />
         <BackendBadge compact={collapsed} />
+        <UserBlock compact={collapsed} />
         <div className="border-t border-border p-3">
           <Button
             variant="ghost"
@@ -194,6 +234,7 @@ export function AppShell({
             </div>
             <NavList compact={false} />
             <BackendBadge compact={false} />
+            <UserBlock compact={false} />
           </aside>
         </div>
       )}
