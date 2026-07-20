@@ -18,6 +18,34 @@ function byInterest(interestId: string | null): Pick<Interest, "id" | "topic"> |
   return i ? { id: i.id, topic: i.topic } : null;
 }
 
+// True when an error means the tables haven't been created yet (migration not
+// run). We treat this as "empty" for reads so the app renders a setup screen
+// instead of crashing with a server-side exception.
+export function isMissingSchemaError(
+  error: { code?: string; message?: string } | null | undefined
+): boolean {
+  if (!error) return false;
+  const msg = (error.message ?? "").toLowerCase();
+  return (
+    error.code === "PGRST205" ||
+    error.code === "42P01" || // undefined_table
+    msg.includes("could not find the table") ||
+    msg.includes("does not exist") ||
+    msg.includes("schema cache")
+  );
+}
+
+export type SchemaStatus = "ready" | "missing";
+
+// Checks whether the expected tables exist. Used by the app layout to show a
+// friendly "finish setup" screen instead of crashing.
+export async function getSchemaStatus(): Promise<SchemaStatus> {
+  const supabase = createClient();
+  if (!supabase) return "ready"; // mock mode always has data
+  const { error } = await supabase.from("interests").select("id").limit(1);
+  return isMissingSchemaError(error) ? "missing" : "ready";
+}
+
 // ---------------------------------------------------------------------------
 // Interests
 // ---------------------------------------------------------------------------
@@ -28,7 +56,10 @@ export async function getInterests(): Promise<Interest[]> {
       .from("interests")
       .select("*")
       .order("weight", { ascending: false });
-    if (error) throw error;
+    if (error) {
+      if (isMissingSchemaError(error)) return [];
+      throw error;
+    }
     return data ?? [];
   }
   return [...store.interests].sort((a, b) => b.weight - a.weight);
@@ -44,7 +75,10 @@ export async function getDrafts(): Promise<PostDraftWithInterest[]> {
       .from("post_drafts")
       .select("*, interest:interests(id, topic)")
       .order("created_at", { ascending: false });
-    if (error) throw error;
+    if (error) {
+      if (isMissingSchemaError(error)) return [];
+      throw error;
+    }
     return (data as PostDraftWithInterest[]) ?? [];
   }
   return [...store.drafts]
@@ -62,7 +96,10 @@ export async function getDraftById(
       .select("*, interest:interests(id, topic)")
       .eq("id", id)
       .maybeSingle();
-    if (error) throw error;
+    if (error) {
+      if (isMissingSchemaError(error)) return null;
+      throw error;
+    }
     return (data as PostDraftWithInterest) ?? null;
   }
   const d = store.drafts.find((x) => x.id === id);
@@ -79,7 +116,10 @@ export async function getEngagements(): Promise<EngagementLogWithInterest[]> {
       .from("engagement_logs")
       .select("*, interest:interests(id, topic)")
       .order("created_at", { ascending: false });
-    if (error) throw error;
+    if (error) {
+      if (isMissingSchemaError(error)) return [];
+      throw error;
+    }
     return (data as EngagementLogWithInterest[]) ?? [];
   }
   return [...store.engagements]
