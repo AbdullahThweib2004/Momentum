@@ -22,7 +22,7 @@ Tags: **[BUILT]** = done for you · **[YOU]** = your turn
 | 2 | Database schema & security | ✅ Done |
 | 3 | Data layer & mock fallback | ✅ Done |
 | 4 | All six pages | ✅ Done |
-| 5 | AI post generation | 🟡 Mocked — needs wiring |
+| 5 | AI post generation | ✅ Live (OpenRouter + mock fallback) |
 | 6 | Connect Supabase | 🟡 Credentials wired — run the SQL |
 | 7 | Authentication UI | ✅ Done |
 | 8 | Deploy | ⬜ Your turn |
@@ -60,30 +60,26 @@ Tags: **[BUILT]** = done for you · **[YOU]** = your turn
 
 ---
 
-## Phase 5 — AI post generation 🟡 (next up)
+## Phase 5 — AI post generation ✅
 
-> **Is AI generating the posts? Not yet.** Every draft comes from
-> `generatePostDraft()` in [`lib/generate.ts`](lib/generate.ts) — a placeholder
-> that stitches realistic text from templates with a fake delay. No model is
-> called. The function's inputs (`topic`, `interest`, `voice`) and output shape
-> already match what a real model needs, so it's a drop-in swap.
+> **Yes — real AI now writes the posts.** `generatePostDraft()` in
+> [`lib/generate.ts`](lib/generate.ts) calls **OpenRouter** (OpenAI-compatible
+> API) using free models, and **automatically falls back to the built-in mock
+> generator** if the key is missing or the API errors / rate-limits — so the
+> feature never breaks.
 
-- [x] `generatePostDraft()` placeholder returning mock text — **[BUILT]**
-- [x] Stable input/output contract for a model swap — **[BUILT]**
-- [ ] Install an SDK (e.g. `@anthropic-ai/sdk`) + add API key — **[YOU]**
-- [ ] Replace mock body with a Claude Messages API call — **[YOU]**
-- [ ] Feed voice notes + content pillars into the prompt — **[YOU]**
+- [x] `generatePostDraft()` calls OpenRouter with a LinkedIn-ghostwriter prompt — **[BUILT]**
+- [x] Model fallback chain + mock fallback on failure — **[BUILT]**
+- [x] Output cleanup (strips preambles, quotes, leaked reasoning) — **[BUILT]**
+- [x] `OPENROUTER_API_KEY` wired into `.env.local` — **[BUILT]**
+- [ ] Pass Settings **voice notes + content pillars** into the prompt — **[YOU]** (optional polish)
+- [ ] Add prepaid credit / a paid model for higher limits & quality — **[YOU]** (optional)
 
-**To make it real:**
-```bash
-npm install @anthropic-ai/sdk
-# add ANTHROPIC_API_KEY to .env.local
-# in generatePostDraft(): call the Claude Messages API,
-# feeding it the topic + interest + your voice notes,
-# and return { content, topic_tag }
-```
-> 💡 The Settings page already collects your **voice notes** and **content
-> pillars** — pass those into the prompt so drafts sound like you.
+**How it works:**
+- Models are tried in order from `OPENROUTER_MODEL` (default: free Gemma / gpt-oss).
+- Free models occasionally rate-limit (HTTP 429) — the code just tries the next
+  one, then the mock. To upgrade, add credit at
+  [openrouter.ai](https://openrouter.ai) and set `OPENROUTER_MODEL` to a paid model.
 
 ---
 
