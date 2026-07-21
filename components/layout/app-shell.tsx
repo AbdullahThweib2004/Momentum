@@ -16,6 +16,7 @@ import { cn, initials } from "@/lib/utils";
 import { NAV_ITEMS } from "./nav";
 import { Button } from "@/components/ui/button";
 import { GenerateDraftDialog } from "@/components/drafts/generate-draft-dialog";
+import { ThemeToggle } from "@/components/theme-toggle";
 import { signOut } from "@/lib/auth";
 import type { Interest } from "@/types/database";
 
@@ -185,11 +186,19 @@ export function AppShell({
         <NavList compact={collapsed} />
         <BackendBadge compact={collapsed} />
         <UserBlock compact={collapsed} />
-        <div className="border-t border-border p-3">
+        <div
+          className={cn(
+            "flex items-center gap-2 border-t border-border p-3",
+            collapsed && "flex-col"
+          )}
+        >
           <Button
             variant="ghost"
             size="sm"
-            className={cn("w-full text-muted-foreground", collapsed && "px-0")}
+            className={cn(
+              "flex-1 text-muted-foreground",
+              collapsed && "w-full px-0"
+            )}
             onClick={() => setCollapsed((c) => !c)}
           >
             <ChevronLeft
@@ -200,6 +209,7 @@ export function AppShell({
             />
             {!collapsed && <span className="ml-1">Collapse</span>}
           </Button>
+          <ThemeToggle align="start" />
         </div>
       </aside>
 
@@ -255,6 +265,9 @@ export function AppShell({
               <Zap className="h-4 w-4" fill="currentColor" />
             </div>
             <span className="font-semibold">Momentum</span>
+          </div>
+          <div className="ml-auto">
+            <ThemeToggle />
           </div>
         </header>
 
