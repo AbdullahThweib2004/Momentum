@@ -10,6 +10,7 @@ import {
 import { PageHeader } from "@/components/layout/page-header";
 import { StatCard } from "@/components/dashboard/stat-card";
 import { ActivityChart } from "@/components/dashboard/activity-chart";
+import { TodaysPanel } from "@/components/dashboard/todays-panel";
 import { GenerateDraftDialog } from "@/components/drafts/generate-draft-dialog";
 import { StatusBadge } from "@/components/drafts/status-badge";
 import {
@@ -87,6 +88,11 @@ export default async function DashboardPage() {
           icon={TrendingUp}
           accent="amber"
         />
+      </div>
+
+      {/* Today's auto-generated posts */}
+      <div className="mt-6">
+        <TodaysPanel drafts={drafts} />
       </div>
 
       {/* Chart + top interests */}

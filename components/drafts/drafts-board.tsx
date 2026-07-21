@@ -14,7 +14,12 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { cn } from "@/lib/utils";
-import type { DraftStatus, Interest, PostDraftWithInterest } from "@/types/database";
+import type {
+  DraftStatus,
+  Interest,
+  Platform,
+  PostDraftWithInterest,
+} from "@/types/database";
 
 const STATUS_FILTERS: { value: DraftStatus | "all"; label: string }[] = [
   { value: "all", label: "All" },
@@ -35,6 +40,7 @@ export function DraftsBoard({
 }) {
   const [status, setStatus] = useState<DraftStatus | "all">("all");
   const [topic, setTopic] = useState<string>(ALL_TOPICS);
+  const [platform, setPlatform] = useState<Platform | "all">("all");
 
   const topics = useMemo(() => {
     const set = new Set(drafts.map((d) => d.topic_tag));
@@ -51,9 +57,10 @@ export function DraftsBoard({
     return drafts.filter((d) => {
       if (status !== "all" && d.status !== status) return false;
       if (topic !== ALL_TOPICS && d.topic_tag !== topic) return false;
+      if (platform !== "all" && d.platform !== platform) return false;
       return true;
     });
-  }, [drafts, status, topic]);
+  }, [drafts, status, topic, platform]);
 
   return (
     <div className="space-y-5">
@@ -86,20 +93,37 @@ export function DraftsBoard({
           ))}
         </div>
 
-        <div className="w-full sm:w-56">
-          <Select value={topic} onValueChange={setTopic}>
-            <SelectTrigger>
-              <SelectValue placeholder="Filter by topic" />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value={ALL_TOPICS}>All topics</SelectItem>
-              {topics.map((t) => (
-                <SelectItem key={t} value={t}>
-                  {t}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
+        <div className="flex w-full gap-2 sm:w-auto">
+          <div className="w-full sm:w-40">
+            <Select
+              value={platform}
+              onValueChange={(v) => setPlatform(v as Platform | "all")}
+            >
+              <SelectTrigger>
+                <SelectValue placeholder="Platform" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">All platforms</SelectItem>
+                <SelectItem value="linkedin">LinkedIn</SelectItem>
+                <SelectItem value="x">X</SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
+          <div className="w-full sm:w-52">
+            <Select value={topic} onValueChange={setTopic}>
+              <SelectTrigger>
+                <SelectValue placeholder="Filter by topic" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value={ALL_TOPICS}>All topics</SelectItem>
+                {topics.map((t) => (
+                  <SelectItem key={t} value={t}>
+                    {t}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
         </div>
       </div>
 

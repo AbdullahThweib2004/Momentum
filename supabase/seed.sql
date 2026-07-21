@@ -29,6 +29,8 @@ begin
   -- Clean slate for this user
   delete from public.post_drafts     where user_id = v_user;
   delete from public.engagement_logs where user_id = v_user;
+  delete from public.daily_topics    where user_id = v_user;
+  delete from public.daily_batches   where user_id = v_user;
   delete from public.interests       where user_id = v_user;
 
   -- ----------------------------------------------------------------------
@@ -143,6 +145,31 @@ begin
     (v_user, null, 'Creator demoed a new AI video tool and shared an honest "what still breaks" breakdown.', 'like', i_gen_media, now() - interval '10 days'),
     (v_user, 'https://www.linkedin.com/posts/example-agents-activity-6', 'Debate on whether autonomous agents should ever act without a human in the loop.', 'other', i_ai_agents, now() - interval '13 days'),
     (v_user, null, 'Enjoyed a post on selling the hour-back outcome instead of the shiny new model.', 'like', i_ai_coding, now() - interval '16 days');
+
+  -- ----------------------------------------------------------------------
+  -- X / Twitter example drafts (short form)
+  -- ----------------------------------------------------------------------
+  insert into public.post_drafts (user_id, content, topic_tag, platform, related_interest_id, status, created_at) values
+    (v_user,
+     E'Cursor''s agent mode didn''t make me faster.\n\nIt made me a reviewer instead of a typist.\n\nThe job moved. That''s the real story.',
+     'AI Coding Assistants', 'x', i_ai_coding, 'draft', now() - interval '5 hours'),
+    (v_user,
+     E'Everyone''s shipping AI agents.\n\nAlmost nobody''s shipping reliable ones.\n\nGive the agent fewer tools, not more. Watch reliability climb.',
+     'AI Agents & Automation', 'x', i_ai_agents, 'approved', now() - interval '20 hours'),
+    (v_user,
+     E'Stop prompting harder.\n\nStart engineering context.\n\nThe model doesn''t need a clever system prompt. It needs the right examples in front of it.',
+     'Building with LLMs', 'x', i_llm_dev, 'published', now() - interval '4 days');
+
+  update public.post_drafts set published_at = now() - interval '4 days'
+    where user_id = v_user and platform = 'x' and status = 'published';
+
+  -- ----------------------------------------------------------------------
+  -- Daily generator topic list (fixed topics; the batch also uses interests)
+  -- ----------------------------------------------------------------------
+  insert into public.daily_topics (user_id, topic, active, created_at) values
+    (v_user, 'A new AI tool I tried this week', true, now() - interval '10 days'),
+    (v_user, 'A hard lesson from shipping with LLMs', true, now() - interval '10 days'),
+    (v_user, 'One workflow AI actually saved me time on', true, now() - interval '10 days');
 
   raise notice 'Momentum seed complete for user %', v_user;
 end $$;

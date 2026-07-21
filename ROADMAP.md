@@ -25,8 +25,17 @@ Tags: **[BUILT]** = done for you · **[YOU]** = your turn
 | 5 | AI post generation | ✅ Live (OpenRouter + mock fallback) |
 | 6 | Connect Supabase | 🟡 Credentials wired — run the SQL |
 | 7 | Authentication UI | ✅ Done |
-| 8 | Deploy | ⬜ Your turn |
-| 9 | Polish & future ideas | ⬜ Optional |
+| 8 | LinkedIn + X posts | ✅ Done |
+| 9 | Daily auto-generator | ✅ Done |
+| 10 | Deploy | ⬜ Your turn |
+| 11 | Polish & future ideas | ⬜ Optional |
+
+> ⚠️ **Schema update.** Added `platform` + the `daily_topics` / `daily_batches`
+> tables. **If you already ran the original `0001` schema**, run the new
+> **`supabase/migrations/0002_platform_and_daily.sql`** (idempotent), then
+> re-run `seed.sql`. **Do NOT re-run `0001`** — `create table if not exists`
+> won't add the new column to an existing table. A brand-new database can just
+> run `0001` (now complete) and skip `0002`.
 
 ---
 
@@ -116,12 +125,33 @@ Tags: **[BUILT]** = done for you · **[YOU]** = your turn
 - [x] Protect routes + redirect unauthenticated users — middleware — **[BUILT]**
 - [x] Show signed-in user + sign-out in the sidebar — **[BUILT]**
 
-## Phase 8 — Deploy ⬜
+## Phase 8 — LinkedIn + X posts ✅
+- [x] `platform` field on drafts ('linkedin' | 'x') — schema + types — **[BUILT]**
+- [x] Platform-aware generation (LinkedIn long-form vs X ≤280 chars) — **[BUILT]**
+- [x] Platform picker in the Generate dialog (LinkedIn / X / Both) — **[BUILT]**
+- [x] Platform badge on cards + platform filter on Drafts — **[BUILT]**
+
+## Phase 9 — Daily auto-generator ✅
+- [x] Pulls from top interests **and** a fixed daily topic list — **[BUILT]**
+- [x] Editable daily topic list on **Settings** (DB-backed) — **[BUILT]**
+- [x] Generates a LinkedIn + X draft per topic each day — **[BUILT]**
+- [x] Idempotent per day via `daily_batches` (no duplicates) — **[BUILT]**
+- [x] "Today's posts" panel on the Dashboard + auto-run on first daily visit — **[BUILT]**
+- [ ] (Optional) Vercel Cron to generate even when you don't open the app — **[YOU]**
+
+> **How "a new day" works:** on your first visit each day the dashboard calls
+> `ensureTodaysPosts()` with your local date. It claims the day in
+> `daily_batches`, then generates drafts from your top 3 interests + active
+> daily topics (capped at 4 topics × 2 platforms = 8 posts) and drops them into
+> Drafts. Open it the next day → a fresh batch appears. You can also click
+> **"Generate today's posts"** manually.
+
+## Phase 10 — Deploy ⬜
 - [x] Push to GitHub — **[BUILT]**
 - [ ] Import repo into Vercel — **[YOU]**
 - [ ] Set env vars in Vercel + deploy — **[YOU]**
 
-## Phase 9 — Polish & future ideas ⬜ (optional)
+## Phase 11 — Polish & future ideas ⬜ (optional)
 - [ ] Persist Settings to a DB table (currently local-only) — **[YOU]**
 - [ ] Scheduled-post reminders / calendar view — **[YOU]**
 - [ ] Derive interests automatically from engagement — **[YOU]**

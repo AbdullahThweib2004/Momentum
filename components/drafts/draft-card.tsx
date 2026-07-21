@@ -24,6 +24,7 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { StatusBadge } from "./status-badge";
+import { PlatformBadge } from "./platform-badge";
 import { PublishDialog } from "./publish-dialog";
 import { ScheduleDialog } from "./schedule-dialog";
 import { setDraftStatus, deleteDraft } from "@/lib/actions";
@@ -69,9 +70,12 @@ export function DraftCard({ draft }: { draft: PostDraftWithInterest }) {
   return (
     <Card className="flex flex-col p-5 transition-shadow hover:shadow-md">
       <div className="mb-3 flex items-center justify-between gap-2">
-        <span className="inline-flex items-center rounded-md bg-accent px-2 py-0.5 text-xs font-medium text-accent-foreground">
-          {draft.topic_tag}
-        </span>
+        <div className="flex min-w-0 items-center gap-1.5">
+          <PlatformBadge platform={draft.platform} />
+          <span className="truncate rounded-md bg-accent px-2 py-0.5 text-xs font-medium text-accent-foreground">
+            {draft.topic_tag}
+          </span>
+        </div>
         <StatusBadge status={draft.status} />
       </div>
 

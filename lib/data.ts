@@ -7,6 +7,7 @@
 import { createClient } from "@/lib/supabase/server";
 import { store } from "@/lib/mock-data";
 import type {
+  DailyTopic,
   EngagementLogWithInterest,
   Interest,
   PostDraftWithInterest,
@@ -125,6 +126,25 @@ export async function getEngagements(): Promise<EngagementLogWithInterest[]> {
   return [...store.engagements]
     .sort((a, b) => +new Date(b.created_at) - +new Date(a.created_at))
     .map((e) => ({ ...e, interest: byInterest(e.related_interest_id) }));
+}
+
+// ---------------------------------------------------------------------------
+// Daily generator topics
+// ---------------------------------------------------------------------------
+export async function getDailyTopics(): Promise<DailyTopic[]> {
+  const supabase = createClient();
+  if (supabase) {
+    const { data, error } = await supabase
+      .from("daily_topics")
+      .select("*")
+      .order("created_at", { ascending: true });
+    if (error) {
+      if (isMissingSchemaError(error)) return [];
+      throw error;
+    }
+    return data ?? [];
+  }
+  return [...store.dailyTopics];
 }
 
 // ---------------------------------------------------------------------------

@@ -23,10 +23,18 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import { cn } from "@/lib/utils";
 import { generateDraft } from "@/lib/actions";
-import type { Interest } from "@/types/database";
+import type { Interest, Platform } from "@/types/database";
 
 const NONE = "__none__";
+
+type PlatformChoice = "linkedin" | "x" | "both";
+const PLATFORM_CHOICES: { value: PlatformChoice; label: string }[] = [
+  { value: "linkedin", label: "LinkedIn" },
+  { value: "x", label: "X" },
+  { value: "both", label: "Both" },
+];
 
 export function GenerateDraftDialog({
   interests,
@@ -39,6 +47,7 @@ export function GenerateDraftDialog({
   const [open, setOpen] = useState(false);
   const [topic, setTopic] = useState("");
   const [interestId, setInterestId] = useState<string>(NONE);
+  const [platformChoice, setPlatformChoice] = useState<PlatformChoice>("both");
   const [pending, startTransition] = useTransition();
 
   function handleInterestChange(value: string) {
@@ -55,15 +64,24 @@ export function GenerateDraftDialog({
       toast.error("Add a topic to generate a draft.");
       return;
     }
+    const platforms: Platform[] =
+      platformChoice === "both" ? ["linkedin", "x"] : [platformChoice];
     startTransition(async () => {
       try {
         await generateDraft({
           topic: finalTopic,
           related_interest_id: interestId === NONE ? null : interestId,
+          platforms,
         });
-        toast.success("Draft generated", {
-          description: "A new draft is waiting for your review.",
-        });
+        toast.success(
+          platforms.length > 1 ? "Drafts generated" : "Draft generated",
+          {
+            description:
+              platforms.length > 1
+                ? "A LinkedIn and an X draft are waiting for your review."
+                : "A new draft is waiting for your review.",
+          }
+        );
         setOpen(false);
         setTopic("");
         setInterestId(NONE);
@@ -116,16 +134,41 @@ export function GenerateDraftDialog({
               id="topic"
               value={topic}
               onChange={(e) => setTopic(e.target.value)}
-              placeholder="e.g. AI in Go-To-Market"
+              placeholder="e.g. AI Coding Assistants"
             />
           </div>
 
+          <div className="space-y-2">
+            <Label>Platform</Label>
+            <div className="flex gap-1.5">
+              {PLATFORM_CHOICES.map((c) => (
+                <button
+                  key={c.value}
+                  type="button"
+                  onClick={() => setPlatformChoice(c.value)}
+                  className={cn(
+                    "flex-1 rounded-lg border px-3 py-2 text-sm font-medium transition-colors",
+                    platformChoice === c.value
+                      ? "border-primary bg-primary/10 text-primary"
+                      : "border-border bg-card text-muted-foreground hover:bg-muted"
+                  )}
+                >
+                  {c.label}
+                </button>
+              ))}
+            </div>
+            <p className="text-xs text-muted-foreground">
+              {platformChoice === "both"
+                ? "Creates a long-form LinkedIn post and a short X version."
+                : platformChoice === "x"
+                  ? "Creates a short post (≤280 characters) for X."
+                  : "Creates a long-form post for LinkedIn."}
+            </p>
+          </div>
+
           <p className="rounded-lg bg-muted/60 px-3 py-2 text-xs text-muted-foreground">
-            Generation currently returns realistic mock content via
-            <code className="mx-1 rounded bg-background px-1 py-0.5">
-              generatePostDraft()
-            </code>
-            — wire it up to your AI provider later.
+            Posts are written by AI via OpenRouter, with an automatic fallback to
+            built-in mock content if the API is unavailable.
           </p>
         </div>
 

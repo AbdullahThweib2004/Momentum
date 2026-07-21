@@ -7,6 +7,8 @@ export type InteractionType = "like" | "comment" | "share" | "other";
 
 export type DraftStatus = "draft" | "approved" | "rejected" | "published";
 
+export type Platform = "linkedin" | "x";
+
 export interface Interest {
   id: string;
   user_id: string;
@@ -32,11 +34,27 @@ export interface PostDraft {
   user_id: string;
   content: string;
   topic_tag: string;
+  platform: Platform;
   related_interest_id: string | null;
   status: DraftStatus;
   scheduled_for: string | null;
   published_at: string | null;
   notes: string | null;
+  created_at: string;
+}
+
+export interface DailyTopic {
+  id: string;
+  user_id: string;
+  topic: string;
+  active: boolean;
+  created_at: string;
+}
+
+export interface DailyBatch {
+  id: string;
+  user_id: string;
+  batch_date: string; // YYYY-MM-DD
   created_at: string;
 }
 
@@ -70,6 +88,18 @@ export interface Database {
         Insert: Omit<PostDraft, "id" | "created_at" | "user_id"> &
           Partial<Pick<PostDraft, "id" | "created_at" | "user_id">>;
         Update: Partial<PostDraft>;
+      };
+      daily_topics: {
+        Row: DailyTopic;
+        Insert: Omit<DailyTopic, "id" | "created_at" | "user_id"> &
+          Partial<Pick<DailyTopic, "id" | "created_at" | "user_id">>;
+        Update: Partial<DailyTopic>;
+      };
+      daily_batches: {
+        Row: DailyBatch;
+        Insert: Omit<DailyBatch, "id" | "created_at" | "user_id"> &
+          Partial<Pick<DailyBatch, "id" | "created_at" | "user_id">>;
+        Update: Partial<DailyBatch>;
       };
     };
   };

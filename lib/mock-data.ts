@@ -5,6 +5,8 @@
 // when the dev server restarts. Mirrors supabase/seed.sql.
 
 import type {
+  DailyBatch,
+  DailyTopic,
   EngagementLog,
   Interest,
   PostDraft,
@@ -47,6 +49,8 @@ interface MockStore {
   interests: Interest[];
   drafts: PostDraft[];
   engagements: EngagementLog[];
+  dailyTopics: DailyTopic[];
+  dailyBatches: DailyBatch[];
 }
 
 function seed(): MockStore {
@@ -61,7 +65,7 @@ function seed(): MockStore {
     { id: I.aiEvals, user_id: MOCK_USER, topic: "Evals & AI Reliability", description: "Testing, evals, and guardrails that keep AI features trustworthy in production.", weight: 4, source: "manual", created_at: daysAgo(12) },
   ];
 
-  const drafts: PostDraft[] = [
+  const draftsBase: Omit<PostDraft, "platform">[] = [
     { id: uid(), user_id: MOCK_USER, content: `Spent a week letting Cursor's agent mode drive real feature work instead of autocomplete.\n\nThe surprise wasn't speed. It was where the time moved.\n\n- 60% less time typing boilerplate\n- 2x more time reviewing diffs\n- 0 shortcuts on tests\n\nThe new tool didn't replace the engineer. It moved the job from writing to reviewing.\n\nWhat's the smallest task you'd hand to an AI coding agent this week?`, topic_tag: "AI Coding Assistants", related_interest_id: I.aiCoding, status: "published", scheduled_for: null, published_at: daysAgo(2), notes: "Led with the specific tool + numbers. Strong comment section from devs.", created_at: daysAgo(5) },
     { id: uid(), user_id: MOCK_USER, content: `Everyone's shipping "AI agents." Almost nobody's shipping reliable ones.\n\nThe fix that changed everything for us: give the agent fewer tools, not more. Three sharp, well-described tools beat fifteen fuzzy ones every time.\n\nConstrain the surface. Watch the reliability climb.\n\nHow many tools does your agent actually need?`, topic_tag: "AI Agents & Automation", related_interest_id: I.aiAgents, status: "published", scheduled_for: null, published_at: daysAgo(6), notes: "Fewer-tools angle resonated. Tagged two builders.", created_at: daysAgo(9) },
     { id: uid(), user_id: MOCK_USER, content: `A dev asked me: "How do I get consistent output from an LLM without babysitting every prompt?"\n\nMy answer: stop prompting harder. Start engineering context.\n\nNobody remembers your clever system prompt. They remember whether the model had the right examples and data in front of it.\n\nShip the context. The quality follows.`, topic_tag: "Building with LLMs", related_interest_id: I.llmDev, status: "published", scheduled_for: null, published_at: daysAgo(11), notes: "Context > prompting framing. High saves.", created_at: daysAgo(13) },
@@ -80,6 +84,24 @@ function seed(): MockStore {
     { id: uid(), user_id: MOCK_USER, content: `New AI tools spread because people trust people, not launch videos. The vendor's benchmark is a billboard. Your honest week-one review is the story.`, topic_tag: "Open-Source AI Models", related_interest_id: I.openModels, status: "published", scheduled_for: null, published_at: daysAgo(9), notes: "Reliable evergreen theme for me.", created_at: daysAgo(12) },
   ];
 
+  // Short-form X / Twitter examples.
+  const xDrafts: PostDraft[] = [
+    { id: uid(), user_id: MOCK_USER, content: `Cursor's agent mode didn't make me faster.\n\nIt made me a reviewer instead of a typist.\n\nThe job moved. That's the real story.`, topic_tag: "AI Coding Assistants", platform: "x", related_interest_id: I.aiCoding, status: "draft", scheduled_for: null, published_at: null, notes: null, created_at: hoursAgo(5) },
+    { id: uid(), user_id: MOCK_USER, content: `Everyone's shipping AI agents.\n\nAlmost nobody's shipping reliable ones.\n\nGive the agent fewer tools, not more. Watch reliability climb.`, topic_tag: "AI Agents & Automation", platform: "x", related_interest_id: I.aiAgents, status: "approved", scheduled_for: null, published_at: null, notes: null, created_at: hoursAgo(20) },
+    { id: uid(), user_id: MOCK_USER, content: `Stop prompting harder.\n\nStart engineering context.\n\nThe model doesn't need a clever system prompt. It needs the right examples in front of it.`, topic_tag: "Building with LLMs", platform: "x", related_interest_id: I.llmDev, status: "published", scheduled_for: null, published_at: daysAgo(4), notes: null, created_at: daysAgo(4) },
+  ];
+
+  const drafts: PostDraft[] = [
+    ...draftsBase.map((d) => ({ ...d, platform: "linkedin" as const })),
+    ...xDrafts,
+  ];
+
+  const dailyTopics: DailyTopic[] = [
+    { id: uid(), user_id: MOCK_USER, topic: "A new AI tool I tried this week", active: true, created_at: daysAgo(10) },
+    { id: uid(), user_id: MOCK_USER, topic: "A hard lesson from shipping with LLMs", active: true, created_at: daysAgo(10) },
+    { id: uid(), user_id: MOCK_USER, topic: "One workflow AI actually saved me time on", active: true, created_at: daysAgo(10) },
+  ];
+
   const engagements: EngagementLog[] = [
     { id: uid(), user_id: MOCK_USER, post_url: "https://www.linkedin.com/posts/example-ai-coding-activity-1", post_summary: "A staff engineer broke down their Claude Code + Cursor workflow for shipping a feature end-to-end in a day.", interaction_type: "comment", related_interest_id: I.aiCoding, created_at: hoursAgo(2) },
     { id: uid(), user_id: MOCK_USER, post_url: "https://www.linkedin.com/posts/example-agents-activity-2", post_summary: "Great thread on why giving an agent fewer, sharper tools beats a giant toolbelt.", interaction_type: "like", related_interest_id: I.aiAgents, created_at: daysAgo(1) },
@@ -93,7 +115,7 @@ function seed(): MockStore {
     { id: uid(), user_id: MOCK_USER, post_url: null, post_summary: "Enjoyed a post on selling the hour-back outcome instead of the shiny new model.", interaction_type: "like", related_interest_id: I.aiCoding, created_at: daysAgo(16) },
   ];
 
-  return { interests, drafts, engagements };
+  return { interests, drafts, engagements, dailyTopics, dailyBatches: [] };
 }
 
 // Persist across HMR reloads in dev.

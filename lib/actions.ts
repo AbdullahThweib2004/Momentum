@@ -4,11 +4,13 @@ import { revalidatePath } from "next/cache";
 import { createClient, getUserId } from "@/lib/supabase/server";
 import { store, uid, MOCK_USER } from "@/lib/mock-data";
 import { generatePostDraft } from "@/lib/generate";
+import { getDailyTopics, getInterests } from "@/lib/data";
 import type {
   DraftStatus,
   EngagementLog,
   Interest,
   InteractionType,
+  Platform,
   PostDraft,
 } from "@/types/database";
 
@@ -18,6 +20,7 @@ function revalidateAll() {
   revalidatePath("/interests");
   revalidatePath("/engagement");
   revalidatePath("/history");
+  revalidatePath("/settings");
 }
 
 // ---------------------------------------------------------------------------
@@ -90,28 +93,34 @@ export async function deleteInterest(id: string) {
 // ---------------------------------------------------------------------------
 // Drafts
 // ---------------------------------------------------------------------------
-export async function generateDraft(input: {
-  topic: string;
-  related_interest_id?: string | null;
+// Look up an interest (with description) whether we're on Supabase or mock.
+async function resolveInterest(id: string | null | undefined) {
+  if (!id) return null;
+  const supabase = createClient();
+  if (supabase) {
+    const all = await getInterests();
+    const i = all.find((x) => x.id === id);
+    return i ? { id: i.id, topic: i.topic, description: i.description } : null;
+  }
+  const i = store.interests.find((x) => x.id === id);
+  return i ? { id: i.id, topic: i.topic, description: i.description } : null;
+}
+
+// Insert a generated draft (Supabase or mock).
+async function insertDraft(d: {
+  content: string;
+  topic_tag: string;
+  platform: Platform;
+  related_interest_id: string | null;
 }) {
-  const interest = input.related_interest_id
-    ? store.interests.find((x) => x.id === input.related_interest_id) ?? null
-    : null;
-
-  const generated = await generatePostDraft({
-    topic: input.topic,
-    interest: interest
-      ? { id: interest.id, topic: interest.topic, description: interest.description }
-      : null,
-  });
-
   const supabase = createClient();
   if (supabase) {
     const user_id = await getUserId();
     const { error } = await supabase.from("post_drafts").insert({
-      content: generated.content,
-      topic_tag: generated.topic_tag,
-      related_interest_id: input.related_interest_id ?? null,
+      content: d.content,
+      topic_tag: d.topic_tag,
+      platform: d.platform,
+      related_interest_id: d.related_interest_id,
       status: "draft",
       ...(user_id ? { user_id } : {}),
     });
@@ -120,9 +129,10 @@ export async function generateDraft(input: {
     store.drafts.unshift({
       id: uid(),
       user_id: MOCK_USER,
-      content: generated.content,
-      topic_tag: generated.topic_tag,
-      related_interest_id: input.related_interest_id ?? null,
+      content: d.content,
+      topic_tag: d.topic_tag,
+      platform: d.platform,
+      related_interest_id: d.related_interest_id,
       status: "draft",
       scheduled_for: null,
       published_at: null,
@@ -130,7 +140,184 @@ export async function generateDraft(input: {
       created_at: new Date().toISOString(),
     });
   }
+}
+
+export async function generateDraft(input: {
+  topic: string;
+  related_interest_id?: string | null;
+  platforms?: Platform[];
+}) {
+  const platforms: Platform[] =
+    input.platforms && input.platforms.length ? input.platforms : ["linkedin"];
+  const interest = await resolveInterest(input.related_interest_id);
+
+  for (const platform of platforms) {
+    const generated = await generatePostDraft({
+      topic: input.topic,
+      interest,
+      platform,
+    });
+    await insertDraft({
+      content: generated.content,
+      topic_tag: generated.topic_tag,
+      platform,
+      related_interest_id: input.related_interest_id ?? null,
+    });
+  }
   revalidateAll();
+}
+
+// ---------------------------------------------------------------------------
+// Daily generator
+// ---------------------------------------------------------------------------
+
+// Daily topic list (used on the Settings page).
+export async function addDailyTopic(topic: string) {
+  const value = topic.trim();
+  if (!value) return;
+  const supabase = createClient();
+  if (supabase) {
+    const user_id = await getUserId();
+    const { error } = await supabase.from("daily_topics").insert({
+      topic: value,
+      active: true,
+      ...(user_id ? { user_id } : {}),
+    });
+    if (error) throw new Error(error.message);
+  } else {
+    store.dailyTopics.push({
+      id: uid(),
+      user_id: MOCK_USER,
+      topic: value,
+      active: true,
+      created_at: new Date().toISOString(),
+    });
+  }
+  revalidateAll();
+}
+
+export async function deleteDailyTopic(id: string) {
+  const supabase = createClient();
+  if (supabase) {
+    const { error } = await supabase.from("daily_topics").delete().eq("id", id);
+    if (error) throw new Error(error.message);
+  } else {
+    store.dailyTopics = store.dailyTopics.filter((t) => t.id !== id);
+  }
+  revalidateAll();
+}
+
+export async function toggleDailyTopic(id: string, active: boolean) {
+  const supabase = createClient();
+  if (supabase) {
+    const { error } = await supabase
+      .from("daily_topics")
+      .update({ active })
+      .eq("id", id);
+    if (error) throw new Error(error.message);
+  } else {
+    const t = store.dailyTopics.find((x) => x.id === id);
+    if (t) t.active = active;
+  }
+  revalidateAll();
+}
+
+export interface DailyRunResult {
+  created: number;
+  alreadyDone: boolean;
+  date: string;
+}
+
+// How many topics a daily batch generates at most (each × LinkedIn + X).
+const DAILY_TOPIC_CAP = 4;
+
+// Idempotently generate "today's" posts. Safe to call repeatedly: a unique
+// (user_id, batch_date) row claims the day so it only generates once.
+// `localDate` is the client's local YYYY-MM-DD so "a new day" respects the
+// user's timezone.
+export async function ensureTodaysPosts(
+  localDate: string
+): Promise<DailyRunResult> {
+  const date = /^\d{4}-\d{2}-\d{2}$/.test(localDate)
+    ? localDate
+    : new Date().toISOString().slice(0, 10);
+
+  const supabase = createClient();
+
+  // 1) Claim the day. If it's already claimed (or schema missing), stop.
+  if (supabase) {
+    const user_id = await getUserId();
+    const { error } = await supabase
+      .from("daily_batches")
+      .insert({ batch_date: date, ...(user_id ? { user_id } : {}) });
+    if (error) {
+      // Unique violation (already generated) or missing schema → nothing to do.
+      return { created: 0, alreadyDone: true, date };
+    }
+  } else {
+    if (store.dailyBatches.some((b) => b.batch_date === date)) {
+      return { created: 0, alreadyDone: true, date };
+    }
+    store.dailyBatches.push({
+      id: uid(),
+      user_id: MOCK_USER,
+      batch_date: date,
+      created_at: new Date().toISOString(),
+    });
+  }
+
+  // 2) Gather topics: top interests + active fixed daily topics.
+  const [interests, dailyTopics] = await Promise.all([
+    getInterests(),
+    getDailyTopics(),
+  ]);
+  const topInterests = [...interests]
+    .sort((a, b) => b.weight - a.weight)
+    .slice(0, 3);
+
+  const jobs: {
+    topic: string;
+    related_interest_id: string | null;
+    description: string | null;
+  }[] = [];
+  for (const i of topInterests)
+    jobs.push({ topic: i.topic, related_interest_id: i.id, description: i.description });
+  for (const t of dailyTopics.filter((t) => t.active))
+    jobs.push({ topic: t.topic, related_interest_id: null, description: null });
+
+  const capped = jobs.slice(0, DAILY_TOPIC_CAP);
+
+  // 3) Generate a LinkedIn + X version for each topic and add to drafts.
+  let created = 0;
+  for (const job of capped) {
+    for (const platform of ["linkedin", "x"] as Platform[]) {
+      try {
+        const generated = await generatePostDraft({
+          topic: job.topic,
+          interest: job.related_interest_id
+            ? {
+                id: job.related_interest_id,
+                topic: job.topic,
+                description: job.description,
+              }
+            : null,
+          platform,
+        });
+        await insertDraft({
+          content: generated.content,
+          topic_tag: generated.topic_tag,
+          platform,
+          related_interest_id: job.related_interest_id,
+        });
+        created++;
+      } catch {
+        // Best-effort: skip a failed item, keep the rest of the batch.
+      }
+    }
+  }
+
+  revalidateAll();
+  return { created, alreadyDone: false, date };
 }
 
 export async function updateDraft(
